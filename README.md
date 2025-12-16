@@ -126,7 +126,21 @@ python -m autoglm_scheduler run "打开微博签到"
 
 # 启动调度服务
 python -m autoglm_scheduler start
+
+# 启动 Web 监控界面
+python -m autoglm_scheduler web --port 8080
 ```
+
+### Web 监控界面
+
+启动后访问 `http://localhost:8080` 即可查看：
+
+- 📱 设备状态（在线/忙碌/离线）
+- ⏰ 定时任务列表
+- 🏃 运行中的任务
+- 📊 执行历史记录
+
+![Web Dashboard](docs/screenshot.png)
 
 ---
 
