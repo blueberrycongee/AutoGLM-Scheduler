@@ -155,7 +155,7 @@ class Scheduler:
             max_retries=max_retries,
         )
         
-        self._enqueue_job(job)
+        self._enqueue_job(job, create_new=False)
         return job.id
     
     def run_parallel(self, tasks: List[str]) -> List[JobResult]:
@@ -171,8 +171,8 @@ class Scheduler:
         jobs = []
         for i, task in enumerate(tasks):
             job = Job(name=f"parallel_{i}", task=task)
-            self._enqueue_job(job)
-            jobs.append(job)
+            queued_job = self._enqueue_job(job, create_new=False)
+            jobs.append(queued_job)
         
         # 等待所有任务完成
         while any(j.status in [JobStatus.PENDING, JobStatus.RUNNING] for j in jobs):
@@ -219,19 +219,32 @@ class Scheduler:
         if self.verbose:
             print("🛑 调度器已停止")
     
-    def _enqueue_job(self, job: Job) -> None:
-        """将任务加入队列"""
-        # 创建新的Job实例（定时任务每次触发需要新实例）
-        new_job = Job(
-            name=job.name,
-            task=job.task,
-            cron=job.cron,
-            device_id=job.device_id,
-            max_retries=job.max_retries,
-        )
+    def _enqueue_job(self, job: Job, create_new: bool = True) -> Job:
+        """将任务加入队列
+        
+        Args:
+            job: 任务对象
+            create_new: 是否创建新实例（定时任务需要，立即执行不需要）
+            
+        Returns:
+            实际入队的 Job 对象
+        """
+        if create_new:
+            # 定时任务每次触发需要新实例
+            new_job = Job(
+                name=job.name,
+                task=job.task,
+                cron=job.cron,
+                device_id=job.device_id,
+                max_retries=job.max_retries,
+            )
+        else:
+            new_job = job
+        
         self._task_queue.enqueue(new_job)
         if self.verbose:
             print(f"📥 任务入队: {new_job.name}")
+        return new_job
     
     def _worker_loop(self) -> None:
         """工作循环：从队列取任务并分配给空闲设备"""
