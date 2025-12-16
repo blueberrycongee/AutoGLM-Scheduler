@@ -44,12 +44,13 @@ class DevicePool:
         self._lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
     
-    def add_device(self, device_id: str) -> bool:
+    def add_device(self, device_id: str, force_online: bool = False) -> bool:
         """
         添加设备到池中
         
         Args:
             device_id: 设备ID（如 emulator-5554 或 192.168.1.100:5555）
+            force_online: 强制标记为在线（Mock模式使用）
             
         Returns:
             是否添加成功
@@ -58,8 +59,10 @@ class DevicePool:
             if device_id in self._devices:
                 return False
             
-            # 检查设备是否在线
-            if not self._check_device_online(device_id):
+            if force_online:
+                # Mock 模式：直接标记为在线
+                status = DeviceStatus.IDLE
+            elif not self._check_device_online(device_id):
                 print(f"警告: 设备 {device_id} 当前不在线，已添加但标记为离线")
                 status = DeviceStatus.OFFLINE
             else:

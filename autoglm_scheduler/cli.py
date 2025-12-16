@@ -13,6 +13,26 @@ load_dotenv()
 
 console = Console()
 
+# 雷电模拟器 ADB 路径
+LDPLAYER_ADB_PATHS = [
+    r"D:\leidian\LDPlayer9\adb.exe",
+    r"C:\leidian\LDPlayer9\adb.exe",
+    r"D:\Program Files\leidian\LDPlayer9\adb.exe",
+    r"C:\Program Files\leidian\LDPlayer9\adb.exe",
+]
+
+def get_adb_command():
+    """获取可用的 ADB 命令"""
+    import shutil
+    # 先检查系统 PATH
+    if shutil.which("adb"):
+        return "adb"
+    # 再检查雷电模拟器
+    for path in LDPLAYER_ADB_PATHS:
+        if os.path.exists(path):
+            return path
+    return "adb"  # 默认
+
 
 @click.group()
 @click.option('--base-url', envvar='AUTOGLM_BASE_URL', default='http://localhost:8000/v1', help='模型API地址')
@@ -45,7 +65,8 @@ def run(ctx, task, device):
     else:
         # 尝试获取已连接设备
         import subprocess
-        result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+        adb_cmd = get_adb_command()
+        result = subprocess.run([adb_cmd, 'devices'], capture_output=True, text=True)
         lines = result.stdout.strip().split('\n')[1:]
         for line in lines:
             if '\tdevice' in line:
@@ -55,6 +76,7 @@ def run(ctx, task, device):
     
     if scheduler._device_pool.total_count == 0:
         console.print("[red]错误: 没有可用的设备[/red]")
+        console.print("[yellow]提示: 请确保雷电模拟器已启动[/yellow]")
         return
     
     console.print(f"[blue]执行任务:[/blue] {task}")
@@ -148,7 +170,8 @@ def start(ctx, device):
     else:
         # 自动检测设备
         import subprocess
-        result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+        adb_cmd = get_adb_command()
+        result = subprocess.run([adb_cmd, 'devices'], capture_output=True, text=True)
         lines = result.stdout.strip().split('\n')[1:]
         for line in lines:
             if '\tdevice' in line:
@@ -157,6 +180,7 @@ def start(ctx, device):
     
     if scheduler._device_pool.total_count == 0:
         console.print("[red]错误: 没有可用的设备[/red]")
+        console.print("[yellow]提示: 请确保雷电模拟器已启动[/yellow]")
         return
     
     # 加载定时任务
@@ -185,7 +209,9 @@ def start(ctx, device):
 def devices():
     """列出已连接的设备"""
     import subprocess
-    result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+    adb_cmd = get_adb_command()
+    console.print(f"[dim]使用 ADB: {adb_cmd}[/dim]")
+    result = subprocess.run([adb_cmd, 'devices'], capture_output=True, text=True)
     
     table = Table(title="已连接设备")
     table.add_column("设备ID", style="cyan")

@@ -37,6 +37,7 @@ class Scheduler:
         model: str = "autoglm-phone-9b",
         max_workers: int = 5,
         verbose: bool = True,
+        mock_mode: bool = False,
     ):
         """
         初始化调度器
@@ -52,6 +53,10 @@ class Scheduler:
         self.api_key = api_key
         self.model = model
         self.verbose = verbose
+        self.mock_mode = mock_mode
+        
+        if mock_mode and verbose:
+            print("🧪 Mock 模式已启用 - 不会连接真实设备")
         
         # 核心组件
         self._device_pool = DevicePool(max_workers=max_workers)
@@ -77,7 +82,8 @@ class Scheduler:
         Returns:
             是否添加成功
         """
-        success = self._device_pool.add_device(device_id)
+        # Mock 模式下强制设备在线
+        success = self._device_pool.add_device(device_id, force_online=self.mock_mode)
         if success and self.verbose:
             print(f"✅ 添加设备: {device_id}")
         return success
@@ -280,29 +286,12 @@ class Scheduler:
         started_at = datetime.now()
         
         try:
-            # 导入并创建Agent
-            from phone_agent import PhoneAgent
-            from phone_agent.agent import AgentConfig
-            from phone_agent.model import ModelConfig
-            
-            model_config = ModelConfig(
-                base_url=self.base_url,
-                api_key=self.api_key,
-                model_name=self.model,
-            )
-            
-            agent_config = AgentConfig(
-                device_id=device_id,
-                verbose=self.verbose,
-            )
-            
-            agent = PhoneAgent(
-                model_config=model_config,
-                agent_config=agent_config,
-            )
-            
-            # 执行任务
-            result_message = agent.run(job.task)
+            if self.mock_mode:
+                # Mock 模式：模拟执行
+                result_message, steps = self._mock_execute(job, device_id)
+            else:
+                # 真实模式：调用 PhoneAgent
+                result_message, steps = self._real_execute(job, device_id)
             
             # 记录结果
             job.result = JobResult(
@@ -311,7 +300,7 @@ class Scheduler:
                 started_at=started_at,
                 finished_at=datetime.now(),
                 device_id=device_id,
-                steps=agent.step_count,
+                steps=steps,
             )
             
             self._task_queue.complete(job.id, success=True)
@@ -346,6 +335,49 @@ class Scheduler:
         # 触发回调
         if self._on_job_complete:
             self._on_job_complete(job)
+    
+    def _mock_execute(self, job: Job, device_id: str) -> tuple:
+        """Mock 模式执行任务"""
+        import random
+        
+        if self.verbose:
+            print(f"🧪 [Mock] 模拟执行: {job.task[:30]}...")
+        
+        # 模拟执行时间 1-3 秒
+        time.sleep(random.uniform(1, 3))
+        
+        # 模拟步数
+        steps = random.randint(3, 10)
+        
+        if self.verbose:
+            print(f"🧪 [Mock] 完成 {steps} 个步骤")
+        
+        return f"[Mock] 任务 '{job.name}' 模拟执行成功", steps
+    
+    def _real_execute(self, job: Job, device_id: str) -> tuple:
+        """真实模式执行任务"""
+        from phone_agent import PhoneAgent
+        from phone_agent.agent import AgentConfig
+        from phone_agent.model import ModelConfig
+        
+        model_config = ModelConfig(
+            base_url=self.base_url,
+            api_key=self.api_key,
+            model_name=self.model,
+        )
+        
+        agent_config = AgentConfig(
+            device_id=device_id,
+            verbose=self.verbose,
+        )
+        
+        agent = PhoneAgent(
+            model_config=model_config,
+            agent_config=agent_config,
+        )
+        
+        result_message = agent.run(job.task)
+        return result_message, agent.step_count
     
     # ==================== 状态查询接口 ====================
     
