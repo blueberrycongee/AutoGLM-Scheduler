@@ -1,0 +1,18 @@
+# AutoGLM-Scheduler 依赖
+
+# 核心依赖
+apscheduler>=3.10.0      # 定时任务调度
+openai>=1.0.0            # 模型API调用
+
+# Open-AutoGLM (从GitHub安装)
+# pip install git+https://github.com/zai-org/Open-AutoGLM.git
+
+# Web界面（可选）
+fastapi>=0.104.0
+uvicorn>=0.24.0
+jinja2>=3.1.0
+
+# 工具
+python-dotenv>=1.0.0     # 环境变量管理
+rich>=13.0.0             # 命令行美化输出
+click>=8.1.0             # CLI框架
