@@ -227,5 +227,22 @@ def remove(name):
     console.print(f"[green]✅ 已移除任务: {name}[/green]")
 
 
+@main.command()
+@click.option('--host', default='0.0.0.0', help='服务地址')
+@click.option('--port', default=8080, help='服务端口')
+@click.pass_context
+def web(ctx, host, port):
+    """启动 Web 监控界面"""
+    from web.app import run_web
+    
+    run_web(
+        host=host,
+        port=port,
+        base_url=ctx.obj['base_url'],
+        api_key=ctx.obj['api_key'],
+        model=ctx.obj['model'],
+    )
+
+
 if __name__ == '__main__':
     main()
